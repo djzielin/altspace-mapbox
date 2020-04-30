@@ -16,7 +16,10 @@ export default class Mapbox {
 	private ourZoom = 10; //15;
 	private ourTileX = 0;
 	private ourTileY = 0;
-	private rasterDEM: number[] = [];
+	public rasterDEM: number[] = [];
+	
+	public minHeight = Infinity;
+	public maxHeight = -1;
 
 	constructor(private context: MRE.Context, private assets: MRE.AssetContainer) {
 		this.loadMapboxKey();
@@ -48,11 +51,12 @@ export default class Mapbox {
 
 	//https://docs.mapbox.com/api/maps/#raster-tiles
 	private async downloadSat() {
+		MRE.log.info("app", "Downloading Sat");
 		const URL = 'https://api.mapbox.com/v4/mapbox.satellite/' +
 					`${this.ourZoom}/${this.ourTileX}/${this.ourTileY}` +
 					`@2x.jpg90?access_token=${this.mapboxKey}`;
 		const res = await fetch(URL);
-		MRE.log.info("app", "sat fetch returned: " + res.status)
+		MRE.log.info("app", "  sat fetch returned: " + res.status)
 		if (res.status !== 200) {
 			process.exit();
 		}
@@ -68,10 +72,12 @@ export default class Mapbox {
 
 	//https://docs.mapbox.com/help/troubleshooting/access-elevation-data/
 	private async downloadTerrain() {
+		MRE.log.info("app", "Downloading Terrain");
 		const URL = 'https://api.mapbox.com/v4/mapbox.terrain-rgb/' +
-					`${this.ourZoom}/${this.ourTileX}/${this.ourTileY}@2x.pngraw?access_token=${this.mapboxKey}`;
+					`${this.ourZoom}/${this.ourTileX}/${this.ourTileY}.pngraw?access_token=${this.mapboxKey}`; 
+					//skip @2x prefix as we don't need resolution boost for terrain (would make mesh too big)
 		const res = await fetch(URL);
-		MRE.log.info("app", "terrain fetch returned: " + res.status);
+		MRE.log.info("app", "  terrain fetch returned: " + res.status);
 		if (res.status !== 200) {
 			process.exit();
 		}
@@ -81,7 +87,9 @@ export default class Mapbox {
 			.raw()
 			.toBuffer();
 
-		MRE.log.info("app", "image is length: " + image.length);
+		MRE.log.info("app", "  image is length: " + image.length);
+		MRE.log.info("app", "  image pixels: " + image.length/4);
+		MRE.log.info("app", "  image res: " + Math.sqrt(image.length/4));
 
 		let minHeight = Infinity;
 		let maxHeight = -1;
@@ -102,9 +110,10 @@ export default class Mapbox {
 			if (height < minHeight) {
 				minHeight = height;
 			}
+			this.rasterDEM.push(height);
 		}
-		MRE.log.info("app", "terrain ranges from : " + minHeight + " to " + maxHeight);
-		MRE.log.info("app", "height delta: " + (maxHeight - minHeight));
+		MRE.log.info("app", "  terrain ranges from : " + minHeight + " to " + maxHeight);
+		MRE.log.info("app", "  height delta: " + (maxHeight - minHeight));
 	}
 
 	public async downloadAll() {
