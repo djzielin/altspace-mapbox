@@ -27,6 +27,9 @@ const ourY=lat2tile(ourLat,ourZoom);
 console.log("ourLat: " + ourLat + " ourX: " + ourX);
 console.log("ourLon: " + ourLon + " ourY: " + ourY);
 
+//const rasterDEM: number[] = [];
+
+
 //https://docs.mapbox.com/api/maps/#raster-tiles
 async function downloadSat() {
 	const res = await fetch(`https://api.mapbox.com/v4/mapbox.satellite/${ourZoom}/${ourX}/${ourY}@2x.jpg90?access_token=${mapboxKey}`);
