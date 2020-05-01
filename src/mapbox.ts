@@ -14,10 +14,12 @@ export default class Mapbox {
 	private ourLat = 29.844006; //TODO make this configurable
 	private ourLon = 31.255553;
 
-	private ourZoom = 10; //15;
+	private ourZoom = 10; 
 	private ourTileX = 0;
 	private ourTileY = 0;
+
 	public rasterDEM: number[] = [];
+
 	public satBuffer: Buffer;
 	
 	public minHeight = Infinity;
@@ -52,24 +54,24 @@ export default class Mapbox {
 	}
 
 	//https://docs.mapbox.com/api/maps/#raster-tiles
-	private async downloadSat() {
-		MRE.log.info("app", "Downloading Sat");
-		const URL = 'https://api.mapbox.com/v4/mapbox.satellite/' +
+	private async downloadRaster(mapType: string, z: number, x: number, y: number, fileFormat: string) {
+		MRE.log.info("app", `Downloading Raster: ${mapType} ${z}/${x}/${y}`);
+
+		const URL = `https://api.mapbox.com/v4/${mapType}/` + //
 					`${this.ourZoom}/${this.ourTileX}/${this.ourTileY}` +
 					//'@2x' + //use this to get 512x512 instead of 256x256
-					`.jpg90?access_token=${this.mapboxKey}`;
+					`${fileFormat}?access_token=${this.mapboxKey}`;
 		const res = await fetch(URL);
-		MRE.log.info("app", "  sat fetch returned: " + res.status)
+		MRE.log.info("app", "  fetch returned: " + res.status)
 		if (res.status !== 200) {
 			process.exit();
 		}
 
-		this.satBuffer = await res.buffer();
-		
-
-		MRE.log.info("app", "  sat buffer size: " + this.satBuffer.byteLength);
+		const buf = await res.buffer();
+		MRE.log.info("app", "  buffer size: " + buf.byteLength);
+		return buf;		
+	
 		/*
-
 		//if we want to dump to disk
 		const dest = fs.createWriteStream('/root/altspace-mapbox/public/sat.jpg');
 
@@ -82,23 +84,13 @@ export default class Mapbox {
 	}
 
 	//https://docs.mapbox.com/help/troubleshooting/access-elevation-data/
-	private async downloadTerrain() {
-		MRE.log.info("app", "Downloading Terrain");
-		const URL = 'https://api.mapbox.com/v4/mapbox.terrain-rgb/' +
-					`${this.ourZoom}/${this.ourTileX}/${this.ourTileY}` +
-					//'@2x' + //use this to get 512x512 instead of 256x256
-					`.pngraw?access_token=${this.mapboxKey}`; 
-					
-		const res = await fetch(URL);
-		MRE.log.info("app", "  terrain fetch returned: " + res.status);
-		if (res.status !== 200) {
-			process.exit();
-		}
+	private async convertImageBufferToHeightArray(ourBuff: Buffer) {
+	
+		MRE.log.info("app", `Converting Image Buffer to Height Array`);
 
-		const resBuffer: Buffer = await res.buffer();
-		const image: Buffer = await sharp(resBuffer)
+		const image: Buffer = await sharp(ourBuff)
 			.raw()
-			.toBuffer();
+			.toBuffer();		
 
 		MRE.log.info("app", "  image is length: " + image.length);
 		MRE.log.info("app", "  image pixels: " + image.length/4);
@@ -110,7 +102,6 @@ export default class Mapbox {
 		for (let i = 0; i < image.length; i += 4) {
 			//documentation: height = -10000 + ((R * 256 * 256 + G * 256 + B) * 0.1)
 
-			//console.log("pixel: " + image[i+0] + " " + image[i+1] + " " + image[i+2]);
 			let R = image[i + 0];
 			let G = image[i + 1];
 			let B = image[i + 2];
@@ -132,9 +123,24 @@ export default class Mapbox {
 	public async downloadAll() {
 		this.computeTileNumbers();
 
-		MRE.log.info("app", "started download");
-		await this.downloadSat();
-		await this.downloadTerrain();	
-		MRE.log.info("app", "all downloads complete!");
+		MRE.log.info("app", "========== started download ==========");
+		this.satBuffer = await this.downloadRaster(
+			'mapbox.satellite',
+			this.ourZoom,
+			this.ourTileX,
+			this.ourTileY,
+			'.jpg90'
+		);
+
+		const demBuffer = await this.downloadRaster(
+			'mapbox.terrain-rgb',
+			this.ourZoom,
+			this.ourTileX,
+			this.ourTileY,
+			'.pngraw'
+		);
+		await this.convertImageBufferToHeightArray(demBuffer);
+
+		MRE.log.info("app", "========== downloads complete! ==========");
 	}
 }
