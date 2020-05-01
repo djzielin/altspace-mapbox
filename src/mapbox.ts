@@ -11,10 +11,10 @@ import fetch from 'node-fetch';
 
 export default class Mapbox {
 	private mapboxKey = "";
-	private ourLat = 29.844006; //TODO make this configurable
+	private ourLat = 29.844006; //TODO: make this configurable
 	private ourLon = 31.255553;
 
-	private ourZoom = 10; 
+	private ourZoom = 10; //TODO: make this configurable
 	private ourTileX = 0;
 	private ourTileY = 0;
 

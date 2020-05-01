@@ -2,6 +2,7 @@
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License.
  */
+// modified by DJZ
 
 import * as MRE from '@microsoft/mixed-reality-extension-sdk';
 import { Vector3 } from '@microsoft/mixed-reality-extension-sdk';
@@ -20,7 +21,7 @@ export default class HelloWorld {
 	constructor(private context: MRE.Context, private server: MRE.WebHost) {
 		MRE.log.info("app", "our constructor started");
 		this.assets = new MRE.AssetContainer(context);
-		this.ourMap=new Mapbox(context,this.assets);
+		this.ourMap = new Mapbox(context, this.assets);
 
 		this.context.onStarted(() => this.started());
 		this.context.onUserLeft(user => this.userLeft(user));
@@ -41,24 +42,17 @@ export default class HelloWorld {
 			" Z: " + v.z.toFixed(precision) + "}";
 	}
 
-	private createMapPlane()
-	{
-		MRE.log.info("app","starting creation of plane for map");
-		//const URI=`${this.server.baseUrl}/sat.jpg`;
-		//MRE.log.info("app","texture is at: " + URI);
+	private createMapPlane() {
+		MRE.log.info("app", "starting creation of plane for map");
+
 		const mat = new GltfGen.Material({
 			baseColorFactor: new MRE.Color4(1.0, 1.0, 1.0, 1),
 			metallicFactor: 0,
 			roughnessFactor: 1,
-			emissiveFactor: new MRE.Color3(0.1,0.1,0.1),
+			emissiveFactor: new MRE.Color3(0.1, 0.1, 0.1),
 			baseColorTexture: new GltfGen.Texture({
-				/*source: new GltfGen.Image({
-					uri: URI
-				})
-				*/
-				source: new MapImage(this.ourMap.satBuffer) 
+				source: new MapImage(this.ourMap.satBuffer)
 			}),
-			//alphaMode: GltfGen.AlphaMode.Blend
 		});
 
 		const plane = new GltfGen.Node({
@@ -88,18 +82,9 @@ export default class HelloWorld {
 	private started() {
 		MRE.log.info("app", "our started callback has begun");
 
-		this.ourMap.downloadAll().then( ()=>
-		{
-			MRE.log.info("app","done downloading");
+		this.ourMap.downloadAll().then(() => {
+			MRE.log.info("app", "done downloading");
 			this.createMapPlane();
 		});
-
-		/*
-		setInterval(() => {			
-		}, 30); //fire every 30ms		
-
-		setInterval(() => {			
-		}, 1000); //fire every 1 sec
-		*/
 	}
 }
