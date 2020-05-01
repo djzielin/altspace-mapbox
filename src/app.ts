@@ -3,6 +3,9 @@
  * Licensed under the MIT License.
  */
 // modified by DJZ
+// TODO: add mapbox attribution 
+//    https://docs.mapbox.com/help/how-mapbox-works/attribution/
+
 
 import * as MRE from '@microsoft/mixed-reality-extension-sdk';
 import { Vector3 } from '@microsoft/mixed-reality-extension-sdk';
@@ -45,16 +48,21 @@ export default class HelloWorld {
 	private createMapPlane() {
 		MRE.log.info("app", "starting creation of plane for map");
 
+		MRE.log.info("app", "  creating image");
+		const ourImage=new MapImage(this.ourMap.satBuffer);
+
+		MRE.log.info("app", "  creating material");
 		const mat = new GltfGen.Material({
 			baseColorFactor: new MRE.Color4(1.0, 1.0, 1.0, 1),
 			metallicFactor: 0,
 			roughnessFactor: 1,
 			emissiveFactor: new MRE.Color3(0.1, 0.1, 0.1),
 			baseColorTexture: new GltfGen.Texture({
-				source: new MapImage(this.ourMap.satBuffer)
+				source: ourImage
 			}),
 		});
 
+		MRE.log.info("app", "  creating node");
 		const plane = new GltfGen.Node({
 			name: 'plane',
 			mesh: new GltfGen.Mesh({ name: 'plane', primitives: [new MapPlane(this.ourMap.rasterDEM, mat)] }),
@@ -62,10 +70,12 @@ export default class HelloWorld {
 			rotation: MRE.Quaternion.FromEulerAngles(-Math.PI / 2, Math.PI, 0)
 		});
 
+		MRE.log.info("app", "  creating factory");
 		const gltfFactory = new GltfGen.GltfFactory([new GltfGen.Scene({
 			nodes: [plane]
 		})]);
 
+		MRE.log.info("app", "  creating actor");
 		MRE.Actor.CreateFromGltf(this.assets, {
 			uri: this.server.registerStaticBuffer('test.glb', gltfFactory.generateGLTF()),
 			actor: {
@@ -77,13 +87,13 @@ export default class HelloWorld {
 				}
 			}
 		});
+		MRE.log.info("app", "  plane creation complete!");
 	}
 
 	private started() {
 		MRE.log.info("app", "our started callback has begun");
 
 		this.ourMap.downloadAll().then(() => {
-			MRE.log.info("app", "done downloading");
 			this.createMapPlane();
 		});
 	}

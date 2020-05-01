@@ -21,7 +21,7 @@ export default class MapImage extends Image {
 	}
 
 	public serialize(document: GLTF.GlTf, data: Buffer): GLTF.GlTfId {
-		MRE.log.info("app", "starting serialize");
+		//MRE.log.info("app", "starting serialize");
 
 		if (this.cachedSerialId !== undefined) {
 			return this.cachedSerialId;
@@ -44,7 +44,7 @@ export default class MapImage extends Image {
 	}
 
 	private _embedBufferImage(document: GLTF.GlTf, data: Buffer): GLTF.GlTfId {
-		MRE.log.info("app", "starting embedImage");
+		//MRE.log.info("app", "starting embedImage");
 
 		let lastBV: GLTF.BufferView;
 		if (document.bufferViews.length > 0) {
