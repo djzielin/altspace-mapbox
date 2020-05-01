@@ -11,12 +11,14 @@ import fetch from 'node-fetch';
 
 export default class Mapbox {
 	private mapboxKey = "";
-	private ourLat = 25.6872739; //TODO make this configurable
-	private ourLon = 32.6201075;
+	private ourLat = 29.844006; //TODO make this configurable
+	private ourLon = 31.255553;
+
 	private ourZoom = 10; //15;
 	private ourTileX = 0;
 	private ourTileY = 0;
 	public rasterDEM: number[] = [];
+	public satBuffer: Buffer;
 	
 	public minHeight = Infinity;
 	public maxHeight = -1;
@@ -54,13 +56,21 @@ export default class Mapbox {
 		MRE.log.info("app", "Downloading Sat");
 		const URL = 'https://api.mapbox.com/v4/mapbox.satellite/' +
 					`${this.ourZoom}/${this.ourTileX}/${this.ourTileY}` +
-					`@2x.jpg90?access_token=${this.mapboxKey}`;
+					//'@2x' + //use this to get 512x512 instead of 256x256
+					`.jpg90?access_token=${this.mapboxKey}`;
 		const res = await fetch(URL);
 		MRE.log.info("app", "  sat fetch returned: " + res.status)
 		if (res.status !== 200) {
 			process.exit();
 		}
 
+		this.satBuffer = await res.buffer();
+		
+
+		MRE.log.info("app", "  sat buffer size: " + this.satBuffer.byteLength);
+		/*
+
+		//if we want to dump to disk
 		const dest = fs.createWriteStream('/root/altspace-mapbox/public/sat.jpg');
 
 		return new Promise((resolve, reject) => {
@@ -68,22 +78,25 @@ export default class Mapbox {
 						.on('finish', ()=>resolve())
 						.on('error', err=> reject(new Error(err.message)));
 		});		
+		*/
 	}
 
 	//https://docs.mapbox.com/help/troubleshooting/access-elevation-data/
 	private async downloadTerrain() {
 		MRE.log.info("app", "Downloading Terrain");
 		const URL = 'https://api.mapbox.com/v4/mapbox.terrain-rgb/' +
-					`${this.ourZoom}/${this.ourTileX}/${this.ourTileY}.pngraw?access_token=${this.mapboxKey}`; 
-					//skip @2x prefix as we don't need resolution boost for terrain (would make mesh too big)
+					`${this.ourZoom}/${this.ourTileX}/${this.ourTileY}` +
+					//'@2x' + //use this to get 512x512 instead of 256x256
+					`.pngraw?access_token=${this.mapboxKey}`; 
+					
 		const res = await fetch(URL);
 		MRE.log.info("app", "  terrain fetch returned: " + res.status);
 		if (res.status !== 200) {
 			process.exit();
 		}
 
-		const resBuffer = await res.buffer();
-		const image = await sharp(resBuffer)
+		const resBuffer: Buffer = await res.buffer();
+		const image: Buffer = await sharp(resBuffer)
 			.raw()
 			.toBuffer();
 

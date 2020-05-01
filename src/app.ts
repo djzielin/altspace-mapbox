@@ -7,6 +7,7 @@ import * as MRE from '@microsoft/mixed-reality-extension-sdk';
 import { Vector3 } from '@microsoft/mixed-reality-extension-sdk';
 import Mapbox from './mapbox';
 import MapPlane from './mapplane';
+import MapImage from './mapimage';
 import * as GltfGen from '@microsoft/gltf-gen';
 
 /**
@@ -43,20 +44,19 @@ export default class HelloWorld {
 	private createMapPlane()
 	{
 		MRE.log.info("app","starting creation of plane for map");
-		const URI=`${this.server.baseUrl}/sat.jpg`;
-		MRE.log.info("app","texture is at: " + URI);
+		//const URI=`${this.server.baseUrl}/sat.jpg`;
+		//MRE.log.info("app","texture is at: " + URI);
 		const mat = new GltfGen.Material({
 			baseColorFactor: new MRE.Color4(1.0, 1.0, 1.0, 1),
 			metallicFactor: 0,
 			roughnessFactor: 1,
 			emissiveFactor: new MRE.Color3(0.1,0.1,0.1),
 			baseColorTexture: new GltfGen.Texture({
-			//emissiveTexture: new GltfGen.Texture({
-				source: new GltfGen.Image({
-					//TODO: looking at image.ts we might be able to store buffer directly
-					//embeddedFilePath: resolve(__dirname, '../../public/uv-grid.png')
+				/*source: new GltfGen.Image({
 					uri: URI
 				})
+				*/
+				source: new MapImage(this.ourMap.satBuffer) 
 			}),
 			//alphaMode: GltfGen.AlphaMode.Blend
 		});

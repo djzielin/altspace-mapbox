@@ -31,7 +31,7 @@ export default class MapPlane extends MeshPrimitive {
 		const uSegments=127; //can't do more then this in single mesh (probably over 65k limit)
 		const vSegments=uSegments; // should be square
 
-		const heightScaler=0.0003;//TOOD: make this configurable
+		const heightScaler=0.0006;//TOOD: make this configurable
 
 		for (let u = 0; u <= uSegments; u++) { //X Axis
 			const uFrac = u / uSegments;       
