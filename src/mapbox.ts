@@ -4,29 +4,65 @@
  */
 
 import * as MRE from '@microsoft/mixed-reality-extension-sdk';
-import { Vector3, log } from '@microsoft/mixed-reality-extension-sdk';
 import fs from 'fs';
-import sharp from 'sharp';
-import fetch from 'node-fetch';
+import MapTile from './maptile';
+import * as GltfGen from '@microsoft/gltf-gen';
 
 export default class Mapbox {
 	private mapboxKey = "";
-	private ourLat = 29.844006; //TODO: make this configurable
+	private ourLat = 29.844006; //TODO: make this configurable (maybe using fancy implements-like?)
 	private ourLon = 31.255553;
 
-	private ourZoom = 10; //TODO: make this configurable
-	private ourTileX = 0;
-	private ourTileY = 0;
-
-	public rasterDEM: number[] = [];
-
-	public satBuffer: Buffer;
+	private ourZoom = 12; //TODO: make this configurable
 	
-	public minHeight = Infinity;
-	public maxHeight = -1;
+	private extraTilesNorth=1;
+	private extraTilesSouth=1;
+	private extraTilesWest=1;
+	private extraTilesEast=1;
 
-	constructor(private context: MRE.Context, private assets: MRE.AssetContainer) {
+	private centerTileX=0;
+	private centerTileY=0;
+	
+	private ourMapTiles: MapTile[] = [];	
+	private ourGLTFNodes: GltfGen.Node[] = [];
+
+	constructor(private context: MRE.Context, private assets: MRE.AssetContainer, private server: MRE.WebHost) {
 		this.loadMapboxKey();
+		this.computeCenterTileNumbers();		
+	}
+
+	public async makeTiles() {
+		for(let x=-this.extraTilesWest;x<=this.extraTilesEast;x++){
+			for(let y=-this.extraTilesNorth;y<=this.extraTilesSouth;y++){
+				const tileX=this.centerTileX+x;
+				const tileY=this.centerTileY+y;
+
+				//MRE.log.info("app",`trying to load tile: ${tileX}/${tileY}`);
+
+				const mt=new MapTile(this.mapboxKey,this.ourZoom,tileX,tileY);
+				this.ourMapTiles.push(mt); //store for later
+
+				await mt.downloadAll();
+				const node=mt.GeneratePlane(8,1);
+
+				//MRE.log.info("app", "  creating GLTF factory"); //combine all tiles into one GLTF
+				const gltfFactory = new GltfGen.GltfFactory([new GltfGen.Scene({
+					nodes: [node]
+				})]);
+		
+				MRE.log.info("app", "  creating tile actor");
+				MRE.Actor.CreateFromGltf(this.assets, {
+					uri: this.server.registerStaticBuffer(`${tileX}/${tileY}`, gltfFactory.generateGLTF()),
+					actor: {
+						transform: {
+							local: {
+								position: {x: x, y: 0, z: -y }
+							}
+						}
+					}
+				});		
+			}
+		}		
 	}
 
 	private loadMapboxKey() {
@@ -37,9 +73,9 @@ export default class Mapbox {
 		}
 	}
 
-	private computeTileNumbers() {
-		this.ourTileX = this.long2tile(this.ourLon, this.ourZoom);
-		this.ourTileY = this.lat2tile(this.ourLat, this.ourZoom);
+	private computeCenterTileNumbers() {
+		this.centerTileX = this.long2tile(this.ourLon, this.ourZoom);
+		this.centerTileY = this.lat2tile(this.ourLat, this.ourZoom);
 	}
 
 	/*
@@ -53,98 +89,5 @@ export default class Mapbox {
 		return (Math.floor(
 			(1 - Math.log(Math.tan(lat * Math.PI / 180) + 1 / Math.cos(lat * Math.PI / 180)) / Math.PI)
 			/ 2 * Math.pow(2, zoom)));
-	}
-
-	/*
-		https://docs.mapbox.com/api/maps/#raster-tiles
-	*/
-	private async downloadRaster(mapType: string, z: number, x: number, y: number, fileFormat: string) {
-		MRE.log.info("app", `Downloading Raster: ${mapType} ${z}/${x}/${y}`);
-
-		const URL = `https://api.mapbox.com/v4/${mapType}/` + //
-					`${this.ourZoom}/${this.ourTileX}/${this.ourTileY}` +
-					//'@2x' + //use this to get 512x512 instead of 256x256
-					`${fileFormat}?access_token=${this.mapboxKey}`;
-		const res = await fetch(URL);
-		MRE.log.info("app", "  fetch returned: " + res.status)
-		if (res.status !== 200) {
-			process.exit();
-		}
-
-		const buf = await res.buffer();
-		MRE.log.info("app", "  buffer size: " + buf.byteLength);
-		return buf;		
-	
-		/*
-		//if we want to dump to disk
-		const dest = fs.createWriteStream('/root/altspace-mapbox/public/sat.jpg');
-
-		return new Promise((resolve, reject) => {
-			res.body.pipe(dest)
-						.on('finish', ()=>resolve())
-						.on('error', err=> reject(new Error(err.message)));
-		});		
-		*/
-	}
-
-	//https://docs.mapbox.com/help/troubleshooting/access-elevation-data/
-	private async convertImageBufferToHeightArray(ourBuff: Buffer) {
-	
-		MRE.log.info("app", `Converting Image Buffer to Height Array`);
-
-		const image: Buffer = await sharp(ourBuff)
-			.raw()
-			.toBuffer();		
-
-		MRE.log.info("app", "  image is length: " + image.length);
-		MRE.log.info("app", "  image pixels: " + image.length/4);
-		MRE.log.info("app", "  image res: " + Math.sqrt(image.length/4));
-
-		let minHeight = Infinity;
-		let maxHeight = -1;
-
-		for (let i = 0; i < image.length; i += 4) {
-			//documentation: height = -10000 + ((R * 256 * 256 + G * 256 + B) * 0.1)
-
-			let R = image[i + 0];
-			let G = image[i + 1];
-			let B = image[i + 2];
-			let A = image[i + 3];
-
-			const height = -10000.0 + ((R * 256.0 * 256.0 + G * 256.0 + B) * 0.1);
-			if (height > maxHeight) {
-				maxHeight = height;
-			}
-			if (height < minHeight) {
-				minHeight = height;
-			}
-			this.rasterDEM.push(height*0.0006); //TODO make this configurable (exageration amount)
-		}
-		MRE.log.info("app", "  terrain ranges from : " + minHeight + " to " + maxHeight);
-		MRE.log.info("app", "  height delta: " + (maxHeight - minHeight));
-	}
-
-	public async downloadAll() {
-		this.computeTileNumbers();
-
-		MRE.log.info("app", "========== started download ==========");
-		this.satBuffer = await this.downloadRaster(
-			'mapbox.satellite',
-			this.ourZoom,
-			this.ourTileX,
-			this.ourTileY,
-			'.jpg90'
-		);
-
-		const demBuffer = await this.downloadRaster(
-			'mapbox.terrain-rgb',
-			this.ourZoom,
-			this.ourTileX,
-			this.ourTileY,
-			'.pngraw'
-		);
-		await this.convertImageBufferToHeightArray(demBuffer);
-
-		MRE.log.info("app", "========== downloads complete! ==========");
-	}
+	}	
 }

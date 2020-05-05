@@ -2,9 +2,8 @@
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License.
  */
-// modified by DJZ
-//TODO: figure out exact polygonization so we get expected number of verts/triangles and utilize DEM properly.
-// (especially at the edges) 
+/* Hacking on MRE original GLTF plane to create suitable height mapped plane for Map tiles */
+
 
 import { Material, MeshPrimitive, Vertex } from '@microsoft/gltf-gen';
 import { Vector2, Vector3 } from '@microsoft/mixed-reality-extension-common';
