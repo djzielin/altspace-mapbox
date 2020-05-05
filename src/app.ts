@@ -65,7 +65,7 @@ export default class HelloWorld {
 		MRE.log.info("app", "  creating node");
 		const plane = new GltfGen.Node({
 			name: 'plane',
-			mesh: new GltfGen.Mesh({ name: 'plane', primitives: [new MapPlane(this.ourMap.rasterDEM, mat)] }),
+			mesh: new GltfGen.Mesh({ name: 'plane', primitives: [new MapPlane(this.ourMap.rasterDEM, mat,8)] }),
 			translation: new MRE.Vector3(0, 0, 0),
 			rotation: MRE.Quaternion.FromEulerAngles(-Math.PI / 2, Math.PI, 0)
 		});

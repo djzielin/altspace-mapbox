@@ -42,7 +42,9 @@ export default class Mapbox {
 		this.ourTileY = this.lat2tile(this.ourLat, this.ourZoom);
 	}
 
-	//https://wiki.openstreetmap.org/wiki/Slippy_map_tilenames#ECMAScript_.28JavaScript.2FActionScript.2C_etc..29
+	/*
+		https://wiki.openstreetmap.org/wiki/Slippy_map_tilenames#ECMAScript_.28JavaScript.2FActionScript.2C_etc..29
+	*/
 	private long2tile(lon: number, zoom: number) {
 		return (Math.floor((lon + 180) / 360 * Math.pow(2, zoom)));
 	}
@@ -53,7 +55,9 @@ export default class Mapbox {
 			/ 2 * Math.pow(2, zoom)));
 	}
 
-	//https://docs.mapbox.com/api/maps/#raster-tiles
+	/*
+		https://docs.mapbox.com/api/maps/#raster-tiles
+	*/
 	private async downloadRaster(mapType: string, z: number, x: number, y: number, fileFormat: string) {
 		MRE.log.info("app", `Downloading Raster: ${mapType} ${z}/${x}/${y}`);
 
@@ -114,7 +118,7 @@ export default class Mapbox {
 			if (height < minHeight) {
 				minHeight = height;
 			}
-			this.rasterDEM.push(height);
+			this.rasterDEM.push(height*0.0006); //TODO make this configurable (exageration amount)
 		}
 		MRE.log.info("app", "  terrain ranges from : " + minHeight + " to " + maxHeight);
 		MRE.log.info("app", "  height delta: " + (maxHeight - minHeight));

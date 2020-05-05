@@ -36,8 +36,6 @@ export default class MapPlane extends MeshPrimitive {
 		const height=width; //should be square
 		const halfHeight = height / 2;
 
-		const heightScaler=0.0006;//TOOD: make this configurable
-
 		for (let u = 0; u < uSegments; u++) { //X Axis
 			const uFrac = u / (uSegments-1); //was -0       
 			for (let v = 0; v < vSegments; v++) { // Y Axis
@@ -51,7 +49,7 @@ export default class MapPlane extends MeshPrimitive {
 					position: new Vector3(
 						-halfWidth + uFrac * width,
 						halfHeight - vFrac * height,
-						rasterDEM[demIndex]*heightScaler), 
+						rasterDEM[demIndex]), 
 					normal: forward,
 					texCoord0: new Vector2(uFrac, vFrac)
 				}));
