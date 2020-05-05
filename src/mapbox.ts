@@ -13,12 +13,12 @@ export default class Mapbox {
 	private ourLat = 29.844006; //TODO: make this configurable (maybe using fancy implements-like?)
 	private ourLon = 31.255553;
 
-	private ourZoom = 12; //TODO: make this configurable
-	
-	private extraTilesNorth=1;
-	private extraTilesSouth=1;
-	private extraTilesWest=1;
-	private extraTilesEast=1;
+	private ourZoom = 15; //TODO: make this configurable
+	private tileWidth=0.25;
+	private extraTilesNorth=5;
+	private extraTilesSouth=5;
+	private extraTilesWest=5;
+	private extraTilesEast=5;
 
 	private centerTileX=0;
 	private centerTileY=0;
@@ -32,18 +32,33 @@ export default class Mapbox {
 	}
 
 	public async makeTiles() {
+		const tilesHigh=1+this.extraTilesNorth+this.extraTilesSouth;
+
 		for(let x=-this.extraTilesWest;x<=this.extraTilesEast;x++){
 			for(let y=-this.extraTilesNorth;y<=this.extraTilesSouth;y++){
 				const tileX=this.centerTileX+x;
 				const tileY=this.centerTileY+y;
 
-				//MRE.log.info("app",`trying to load tile: ${tileX}/${tileY}`);
-
 				const mt=new MapTile(this.mapboxKey,this.ourZoom,tileX,tileY);
 				this.ourMapTiles.push(mt); //store for later
 
 				await mt.downloadAll();
-				const node=mt.GeneratePlane(8,1);
+				let tileLeft: MapTile = null;
+				let tileAbove: MapTile = null;
+
+				MRE.log.info("app", "creating plane for single tile");
+				MRE.log.info("app", "  offset will be: " + x + " " + -y);
+
+				if (y !== -this.extraTilesNorth) { //if not first row, we have a tile above us
+					MRE.log.info("app","  we have a tile above us");
+					tileAbove = this.ourMapTiles[this.ourMapTiles.length - 2];
+				}
+				if (x !== -this.extraTilesWest) {  //if not first column, we have tile to our left
+					MRE.log.info("app","  we have a tile to our left!");
+					tileLeft = this.ourMapTiles[this.ourMapTiles.length - 1 - tilesHigh];
+				}
+
+				const node=mt.GeneratePlane(128,this.tileWidth,tileLeft,tileAbove);
 
 				//MRE.log.info("app", "  creating GLTF factory"); //combine all tiles into one GLTF
 				const gltfFactory = new GltfGen.GltfFactory([new GltfGen.Scene({
@@ -56,7 +71,7 @@ export default class Mapbox {
 					actor: {
 						transform: {
 							local: {
-								position: {x: x, y: 0, z: -y }
+								position: {x: x*this.tileWidth, y: 0, z: -y*this.tileWidth }
 							}
 						}
 					}

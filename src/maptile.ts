@@ -9,17 +9,19 @@ import fetch from 'node-fetch';
 import MapPlane from './mapplane';
 import MapImage from './mapimage';
 import * as GltfGen from '@microsoft/gltf-gen';
+import { TextureMagFilter, TextureMinFilter, TextureWrapMode } from '@microsoft/gltf-gen/built/enums';
+
 
 export default class MapTile {
 
-	public rasterDEM: number[] = [];
+	public heightDEM: number[] = [];
 
 	public satBuffer: Buffer;
 	
 	public minHeight = Infinity;
 	public maxHeight = -1;
 
-	private ourMapPlane: MapPlane;
+	public ourMapPlane: MapPlane;
 
 	constructor(private mapboxKey: string, 
 				private ourZoom: number,
@@ -30,13 +32,19 @@ export default class MapTile {
 	/*
 		https://docs.mapbox.com/api/maps/#raster-tiles
 	*/
-	private async downloadRaster(mapType: string, z: number, x: number, y: number, fileFormat: string) {
+	private async downloadRaster(mapType: string, z: number, x: number, y: number, 
+		fileFormat: string, doResBoost = false) {
 		MRE.log.info("app", `Downloading Raster: ${mapType} ${z}/${x}/${y}`);
 
-		const URL = `https://api.mapbox.com/v4/${mapType}/` + //
-					`${this.ourZoom}/${this.ourTileX}/${this.ourTileY}` +
-					//'@2x' + //use this to get 512x512 instead of 256x256
-					`${fileFormat}?access_token=${this.mapboxKey}`;
+		let URL = `https://api.mapbox.com/v4/${mapType}/` + //
+			`${this.ourZoom}/${this.ourTileX}/${this.ourTileY}`;
+		if (doResBoost) {
+			URL += '@2x';
+		}
+		URL +=
+			`${fileFormat}?access_token=${this.mapboxKey}`;
+
+		MRE.log.info("app", "Total URL: " + URL);
 		const res = await fetch(URL);
 		MRE.log.info("app", "  fetch returned: " + res.status)
 		if (res.status !== 200) {
@@ -59,7 +67,9 @@ export default class MapTile {
 		*/
 	}
 
-	//https://docs.mapbox.com/help/troubleshooting/access-elevation-data/
+	/*
+		https://docs.mapbox.com/help/troubleshooting/access-elevation-data/
+	*/
 	private async convertImageBufferToHeightArray(ourBuff: Buffer) {
 	
 		MRE.log.info("app", `Converting Image Buffer to Height Array`);
@@ -90,7 +100,7 @@ export default class MapTile {
 			if (height < minHeight) {
 				minHeight = height;
 			}
-			this.rasterDEM.push(height*0.0006); //TODO make this configurable (exageration amount)
+			this.heightDEM.push(height*0.0010); //TODO make this configurable (exageration amount)
 		}
 		MRE.log.info("app", "  terrain ranges from : " + minHeight.toFixed(2) + " to " + maxHeight.toFixed(2));
 		MRE.log.info("app", "  height delta: " + (maxHeight - minHeight).toFixed(2));
@@ -105,7 +115,8 @@ export default class MapTile {
 			this.ourZoom,
 			this.ourTileX,
 			this.ourTileY,
-			'.jpg90'
+			'.jpg90',
+			false
 		);
 
 		const demBuffer = await this.downloadRaster(
@@ -113,17 +124,15 @@ export default class MapTile {
 			this.ourZoom,
 			this.ourTileX,
 			this.ourTileY,
-			'.pngraw'
+			'.pngraw',
+			false
 		);
 		await this.convertImageBufferToHeightArray(demBuffer);
 
 		//MRE.log.info("app", "========== downloads complete! ==========");
 	}	
 
-	public GeneratePlane(tileSegs: number, tileWidth: number){
-
-		MRE.log.info("app", "starting creation of plane for single tile");
-
+	public GeneratePlane(tileSegs: number, tileWidth: number, tileLeft: MapTile, tileAbove: MapTile){
 		MRE.log.info("app", "  creating image");
 		const ourImage=new MapImage(this.satBuffer);
 
@@ -134,12 +143,23 @@ export default class MapTile {
 			roughnessFactor: 1,
 			emissiveFactor: new MRE.Color3(0.1, 0.1, 0.1),
 			baseColorTexture: new GltfGen.Texture({
-				source: ourImage
+				source: ourImage,
+				wrapS: TextureWrapMode.ClampToEdge,
+				wrapT: TextureWrapMode.ClampToEdge
 			}),
 		});
 
 		MRE.log.info("app", "  creating node");
-		this.ourMapPlane=new MapPlane(this.rasterDEM, mat,tileSegs,tileWidth);
+		let leftPlane: MapPlane = null;
+		let abovePlane: MapPlane = null;
+
+		if(tileLeft){
+			leftPlane=tileLeft.ourMapPlane;
+		}
+		if(tileAbove){
+			abovePlane=tileAbove.ourMapPlane;
+		}
+		this.ourMapPlane=new MapPlane(this.heightDEM, mat,tileSegs,tileWidth, leftPlane, abovePlane);
 		
 		const node = new GltfGen.Node({
 			name: 'plane',

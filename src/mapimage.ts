@@ -2,7 +2,7 @@
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License.
  */
-// modified by DJZ
+/* Hacking on MRE original GLTF Image class to let us create a GLTF from a memory buffer -DJZ */
 
 import GLTF from '@microsoft/gltf-gen/built/gen/gltf';
 import { Image } from '@microsoft/gltf-gen/built/image';

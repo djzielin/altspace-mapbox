@@ -21,12 +21,14 @@ export default class MapPlane extends MeshPrimitive {
 	 * @param vSegments The number of subdivisions along the Y axis
 	 * @param material An initial material to apply to the plane
 	 */
-	public constructor(rasterDEM: number[], material: Material = null, uSegments=128, width=2) {
-		super({ material });
-		const vSegments=uSegments; // should be square
+	public constructor(rasterDEM: number[], material: Material = null, uSegments = 128, width = 2,
+		leftPlane: MapPlane = null, abovePlane: MapPlane = null) {
 
-		if(uSegments>128) {
-			MRE.log.error("app",`can't do a mesh this big! ${uSegments} x ${vSegments}`);
+		super({ material });
+		const vSegments = uSegments; // should be square
+
+		if (uSegments > 128) {
+			MRE.log.error("app", `can't do a mesh this big! ${uSegments} x ${vSegments}`);
 			return;
 		}
 
@@ -40,15 +42,36 @@ export default class MapPlane extends MeshPrimitive {
 			for (let v = 0; v < vSegments; v++) { // Y Axis
 				const vFrac = v / (vSegments-1); //was -0
 
-				const demFactor=256/uSegments;
-				const demIndex=(v*demFactor)*256+u*demFactor; //map from uSegments->256
+				//TODO average instead of sampling?
+				const demX=Math.floor(uFrac*255.0);
+				const demY=Math.floor(vFrac*255.0);
+
+				//MRE.log.info("app","demX: " + demX + " demY: " + demY);
+
+				const demIndex=demY*256+demX; //map uv to DEM 
+
+				let x=-halfWidth + uFrac * width;
+				let y=halfHeight - vFrac * height;
+				let z=rasterDEM[demIndex];
+
+				if(leftPlane && u===0){ //first column, line up with plane to our left
+					//MRE.log.info("app","lining up to plane left of us");
+					const index=(uSegments-1)*vSegments+v;
+					z=leftPlane.vertices[index].position.z;
+
+				}
+				if(abovePlane && v===0){ //first row, line up with plane above us
+					//MRE.log.info("app","lining up to plane above us");
+					const index=u*uSegments+(vSegments-1);
+					z=abovePlane.vertices[index].position.z;
+				}
 
 				// add a vertex
 				this.vertices.push(new Vertex({
 					position: new Vector3(
-						-halfWidth + uFrac * width,
-						halfHeight - vFrac * height,
-						rasterDEM[demIndex]), 
+						x,
+						y,
+						z), 
 					normal: forward,
 					texCoord0: new Vector2(uFrac, vFrac)
 				}));
