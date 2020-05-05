@@ -8,6 +8,7 @@
 
 import { Material, MeshPrimitive, Vertex } from '@microsoft/gltf-gen';
 import { Vector2, Vector3 } from '@microsoft/mixed-reality-extension-common';
+import * as MRE from '@microsoft/mixed-reality-extension-sdk';
 
 /**
  * A MeshPrimitive prepopulated with a subdivided +Z-facing plane's vertices and triangles
@@ -21,27 +22,29 @@ export default class MapPlane extends MeshPrimitive {
 	 * @param vSegments The number of subdivisions along the Y axis
 	 * @param material An initial material to apply to the plane
 	 */
-	public constructor(rasterDEM: number[], material: Material = null) {
+	public constructor(rasterDEM: number[], material: Material = null, uSegments=128, width=2) {
 		super({ material });
+		const vSegments=uSegments; // should be square
+
+		if(uSegments>128) {
+			MRE.log.error("app",`can't do a mesh this big! ${uSegments} x ${vSegments}`);
+			return;
+		}
 
 		const forward = Vector3.Forward();
-
-		const width=2;
 		const halfWidth = width / 2;
 		const height=width; //should be square
 		const halfHeight = height / 2;
 
-		const uSegments=127; //can't do more then this in single mesh (probably over 65k limit)
-		const vSegments=uSegments; // should be square
-
 		const heightScaler=0.0006;//TOOD: make this configurable
 
-		for (let u = 0; u <= uSegments; u++) { //X Axis
-			const uFrac = u / uSegments;       
-			for (let v = 0; v <= vSegments; v++) { // Y Axis
-				const vFrac = v / vSegments;
+		for (let u = 0; u < uSegments; u++) { //X Axis
+			const uFrac = u / (uSegments-1); //was -0       
+			for (let v = 0; v < vSegments; v++) { // Y Axis
+				const vFrac = v / (vSegments-1); //was -0
 
-				const demIndex=(v*2)*256+u*2; //map from 128->256
+				const demFactor=256/uSegments;
+				const demIndex=(v*demFactor)*256+u*demFactor; //map from uSegments->256
 
 				// add a vertex
 				this.vertices.push(new Vertex({
@@ -55,10 +58,9 @@ export default class MapPlane extends MeshPrimitive {
 
 				if (u > 0 && v > 0) {
 					const io = this.vertices.length - 1;
-					// (vSegments - 1) verts per stripe
-					const topLeft = io - vSegments - 2;
+					const topLeft = io - vSegments - 1; //was -2 
 					const topRight = io - 1;
-					const bottomLeft = io - vSegments - 1;
+					const bottomLeft = io - vSegments - 0; //was -1
 					const bottomRight = io;
 					this.triangles.push(topLeft, bottomLeft, bottomRight, topLeft, bottomRight, topRight);
 				}
