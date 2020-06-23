@@ -58,7 +58,7 @@ export default class Mapbox {
 					tileLeft = this.ourMapTiles[this.ourMapTiles.length - 1 - tilesHigh];
 				}
 
-				const node=mt.GeneratePlane(128,this.tileWidth,tileLeft,tileAbove);
+				const node=mt.GeneratePlane(32,this.tileWidth,tileLeft,tileAbove);
 
 				//MRE.log.info("app", "  creating GLTF factory"); //combine all tiles into one GLTF
 				const gltfFactory = new GltfGen.GltfFactory([new GltfGen.Scene({

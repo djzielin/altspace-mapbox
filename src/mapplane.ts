@@ -67,6 +67,7 @@ export default class MapPlane extends MeshPrimitive {
 				}
 
 				// add a vertex
+
 				this.vertices.push(new Vertex({
 					position: new Vector3(
 						x,

@@ -10,7 +10,7 @@ import MapPlane from './mapplane';
 import MapImage from './mapimage';
 import * as GltfGen from '@microsoft/gltf-gen';
 import { TextureMagFilter, TextureMinFilter, TextureWrapMode } from '@microsoft/gltf-gen/built/enums';
-
+import { AlphaMode } from '@microsoft/gltf-gen/built/enums';
 
 export default class MapTile {
 
@@ -138,14 +138,19 @@ export default class MapTile {
 
 		MRE.log.info("app", "  creating material");
 		const mat = new GltfGen.Material({
-			baseColorFactor: new MRE.Color4(1.0, 1.0, 1.0, 1),
-			metallicFactor: 0,
-			roughnessFactor: 1,
-			emissiveFactor: new MRE.Color3(0.1, 0.1, 0.1),
+			baseColorFactor: new MRE.Color4(1.0, 1.0, 1.0, 1.0),
+			//metallicFactor: 0,
+			//roughnessFactor: 1,
+			//emissiveFactor: new MRE.Color3(0.1, 0.1, 0.1),
+			alphaMode: AlphaMode.Opaque,
+			//alphaCutoff: 1.0,
+			//doubleSided: true,
 			baseColorTexture: new GltfGen.Texture({
 				source: ourImage,
 				wrapS: TextureWrapMode.ClampToEdge,
-				wrapT: TextureWrapMode.ClampToEdge
+				wrapT: TextureWrapMode.ClampToEdge,
+				magFilter: TextureMagFilter.Linear,
+				minFilter: TextureMinFilter.LinearMipmapLinear				
 			}),
 		});
 
@@ -161,6 +166,14 @@ export default class MapTile {
 		}
 		this.ourMapPlane=new MapPlane(this.heightDEM, mat,tileSegs,tileWidth, leftPlane, abovePlane);
 		
+		/*const node = new GltfGen.Node({
+			name: 'plane',
+			mesh: new GltfGen.Mesh({ name: 'plane', primitives: 
+				[new GltfGen.Plane(tileWidth, tileWidth, tileSegs, tileSegs, mat)] }),
+			translation: new MRE.Vector3(0, 0, 0),
+			rotation: MRE.Quaternion.FromEulerAngles(-Math.PI / 2, Math.PI, 0)
+		}); */
+
 		const node = new GltfGen.Node({
 			name: 'plane',
 			mesh: new GltfGen.Mesh({ name: 'plane', primitives: [ this.ourMapPlane ]}),
