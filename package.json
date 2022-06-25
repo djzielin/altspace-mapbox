@@ -45,7 +45,7 @@
     "colorsys": "^1.0.22",
     "csv-parse": ">=4.4.6",
     "dotenv": "^6.2.0",
-    "node-fetch": "^2.6.0",
+    "node-fetch": "^2.6.7",
     "node-osc": "",
     "pkg": "^4.4.7",
     "sharp": "^0.25.2",
